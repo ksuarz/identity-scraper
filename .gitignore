@@ -1,0 +1,10 @@
+# Temporary files
+*~
+*.sw[po]
+
+# Compiled files
+__pycache__/
+*.py[co]
+
+# Virtual environment
+virtualenv/
