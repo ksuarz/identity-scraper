@@ -77,8 +77,41 @@ def twitterTweet(soup, url, domain):
                         ########
                         driver.close() # close the popup window, move on to any others
                 driver.switch_to_window(main_window_handle) # switch back to main window
-        
-    
+
+
+def googleLogin(soup, url, domain):
+    google_oauth = 'https://accounts.google.com/o/openid'
+
+    # Begin navigation to the page
+    driver.get(url)
+    main_window_handle = driver.window_handles[0]
+
+    # Explore all possible links
+    links = driver.find_elements_by_tag_name('a')
+    for link in links:
+        href = link.get_attribute('href')
+
+        # Candidates are links with no href or links with no valid href (e.g.
+        # '#') since there is JavaScript magic that does the login
+        if (link.is_displayed() and (not href or not url_regex.match(href)) and
+                int(link.size['width']) > 2 and int(link.size['height'])) > 2:
+            link.click()
+
+            # Pop-ups and the main window
+            for window_handle in driver.window_handles:
+                driver.switch_to_window(window_handle)
+                # Found a Google OAuth page
+                if driver.current_url.startswith(google_oauth):
+                    yield (url, driver.current_url, domain,
+                           'google.com', 'Google Login')
+                # Close this popup
+                if window_handle != main_window_handle:
+                    driver.close()
+
+            # Return to the main window
+            driver.switch_to_window(main_window_handle)
+
+
 def pinterestPin(soup, url, domain):
     return []
 
