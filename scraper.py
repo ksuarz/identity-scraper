@@ -6,20 +6,29 @@ import argparse
 import requests
 
 from BeautifulSoup import BeautifulSoup
+from tldextract import TLDExtract
+tldextract = TLDExtract(suffix_list_url=False)
 
 
-def image(soup):
-    pass
-def video(soup):
-    pass
-def pixelBeacon(soup):
-    pass
-def facebookLike(soup):
-    pass
-def twitterTweet(soup):
-    pass
-def pinterestPin(soup):
-    pass
+def image(soup, url, domain):
+    return []
+def video(soup, url, domain):
+    return []
+def pixelBeacon(soup, url, domain):
+    beacons = soup.findAll('img', {'width': 1, 'height': 1})
+    for beacon in beacons:
+        resource_url = beacon['src']
+        extract = tldextract(resource_url)
+        resource_domain = '%s.%s' % (extract.domain, extract.suffix)
+        if domain != resource_domain:
+            yield (url, resource_url, domain, resource_domain, 'pixel beacon')
+
+def facebookLike(soup, url, domain):
+    return []
+def twitterTweet(soup, url, domain):
+    return []
+def pinterestPin(soup, url, domain):
+    return []
 
 def scrape(url):
     """Grab identity information from the given URL.
@@ -29,13 +38,16 @@ def scrape(url):
     """
     r = requests.get(url)
     soup = BeautifulSoup(r.text)
+    extract = tldextract(url)
+    domain = '%s.%s' % (extract.domain, extract.suffix)
 
-    image(soup)
-    video(soup)
-    pixelBeacon(soup)
-    facebookLike(soup)
-    twitterTweet(soup)
-    pinterestPin(soup)
+    tuples = set()
+    categories = [image, video, pixelBeacon, facebookLike, twitterTweet, pinterestPin]
+    for category in categories:
+        tuples.update(category(soup, url, domain))
+
+    for tpl in sorted(tuples):
+        print '%s, %s, %s, %s, %s' % tpl
 
 if __name__ == "__main__":
     # Set up command line options
@@ -50,5 +62,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Begin work
-    for url in args.urls:
+    for url in args.url:
         scrape(url)
