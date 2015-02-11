@@ -1,0 +1,4 @@
+BeautifulSoup==3.2.1
+requests==2.5.1
+selenium==2.44.0
+tldextract==1.5.1
