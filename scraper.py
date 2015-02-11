@@ -4,6 +4,7 @@ Collects user identity information from a website.
 """
 import argparse
 import requests
+import re
 
 from BeautifulSoup import BeautifulSoup
 from tldextract import TLDExtract
@@ -11,9 +12,27 @@ tldextract = TLDExtract(suffix_list_url=False)
 
 
 def image(soup, url, domain):
-    return []
+    images = soup.findAll('img', width=re.compile("\d+"))
+    for image in images:
+        if image['width'] > 0 or image['height'] > 0:
+            # Not a pixel beacon
+            resource_url = image['src']
+            extract = tldextract(resource_url)
+            resource_domain = '%s.%s' % (extract.domain, extract.suffix)
+            if domain != resource_domain:
+                yield (url, resource_url, domain, resource_domain, 'image')
+    
+
 def video(soup, url, domain):
-    return []
+    videos = soup.findAll('video')
+    for video in videos:
+        resource_url = video['src']
+        extract = tldextract(resource_url)
+        resource_domain = '%s.%s' % (extract.domain, extract.suffix)
+        if domain != resource_domain:
+            yield (url, resource_url, domain, resource_domain, 'video')
+
+
 def pixelBeacon(soup, url, domain):
     beacons = soup.findAll('img', {'width': 1, 'height': 1})
     for beacon in beacons:
