@@ -11,10 +11,15 @@ from tldextract import TLDExtract
 tldextract = TLDExtract(suffix_list_url=False)
 
 
-def image(soup, url, domain):
+def image(soup, url, domain, min_dim=5):
+    """Finds images on pages with minimum dimension.
+
+    Images with dimension greater than `dim` are considered to be real images;
+    otherwise, they are skipped and classified as pixel beacons.
+    """
     images = soup.findAll('img', width=re.compile("\d+"))
     for image in images:
-        if image['width'] > 0 or image['height'] > 0:
+        if int(image['width']) > min_dim or int(image['height']) > min_dim:
             # Not a pixel beacon
             resource_url = image['src']
             extract = tldextract(resource_url)
@@ -24,6 +29,7 @@ def image(soup, url, domain):
     
 
 def video(soup, url, domain):
+    """Finds video tags."""
     videos = soup.findAll('video')
     for video in videos:
         resource_url = video['src']
