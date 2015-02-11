@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """ scraper.py - Web Identity Scraper
 
 Collects user identity information from a website.
@@ -48,10 +49,15 @@ def pixelBeacon(soup, url, domain):
         if domain != resource_domain:
             yield (url, resource_url, domain, resource_domain, 'pixel beacon')
 
+
 def facebookLike(soup, url, domain):
     return []
+
+
 def twitterTweet(soup, url, domain):
     return []
+
+
 def pinterestPin(soup, url, domain):
     return []
 
@@ -73,6 +79,7 @@ def scrape(url):
 
     for tpl in sorted(tuples):
         print '%s, %s, %s, %s, %s' % tpl
+
 
 if __name__ == "__main__":
     # Set up command line options
