@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """ scraper.py - Web Identity Scraper
 
 Collects user identity information from a website.
@@ -14,10 +15,34 @@ driver = webdriver.Firefox()
 url_regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
 
 
-def image(soup, url, domain):
-    return []
+def image(soup, url, domain, min_dim=5):
+    """Finds images on pages with minimum dimension.
+
+    Images with dimension greater than `dim` are considered to be real images;
+    otherwise, they are skipped and classified as pixel beacons.
+    """
+    images = soup.findAll('img', width=re.compile("\d+"))
+    for image in images:
+        if int(image['width']) > min_dim or int(image['height']) > min_dim:
+            # Not a pixel beacon
+            resource_url = image['src']
+            extract = tldextract(resource_url)
+            resource_domain = '%s.%s' % (extract.domain, extract.suffix)
+            if domain != resource_domain:
+                yield (url, resource_url, domain, resource_domain, 'image')
+    
+
 def video(soup, url, domain):
-    return []
+    """Finds video tags."""
+    videos = soup.findAll('video')
+    for video in videos:
+        resource_url = video['src']
+        extract = tldextract(resource_url)
+        resource_domain = '%s.%s' % (extract.domain, extract.suffix)
+        if domain != resource_domain:
+            yield (url, resource_url, domain, resource_domain, 'video')
+
+
 def pixelBeacon(soup, url, domain):
     # Should also check for 2x2, maybe just greater than 5 in any dimension? 
     beacons = soup.findAll('img', {'width': 1, 'height': 1})
@@ -28,8 +53,11 @@ def pixelBeacon(soup, url, domain):
         if domain != resource_domain:
             yield (url, resource_url, domain, resource_domain, 'pixel beacon')
 
-def facebookShare(soup, url, domain):
+
+def facebookLike(soup, url, domain):
     return []
+
+
 def twitterTweet(soup, url, domain):
     driver.get(url)
     main_window_handle = driver.window_handles[0]
@@ -54,6 +82,7 @@ def twitterTweet(soup, url, domain):
 def pinterestPin(soup, url, domain):
     return []
 
+
 def scrape(url):
     """Grab identity information from the given URL.
 
@@ -72,6 +101,7 @@ def scrape(url):
 
     for tpl in sorted(tuples):
         print '%s, %s, %s, %s, %s' % tpl
+
 
 if __name__ == "__main__":
     # Set up command line options
