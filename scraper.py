@@ -4,10 +4,14 @@ Collects user identity information from a website.
 """
 import argparse
 import requests
+import re
 
 from BeautifulSoup import BeautifulSoup
 from tldextract import TLDExtract
+from selenium import webdriver
 tldextract = TLDExtract(suffix_list_url=False)
+driver = webdriver.Firefox()
+url_regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
 
 
 def image(soup, url, domain):
@@ -15,6 +19,7 @@ def image(soup, url, domain):
 def video(soup, url, domain):
     return []
 def pixelBeacon(soup, url, domain):
+    # Should also check for 2x2, maybe just greater than 5 in any dimension? 
     beacons = soup.findAll('img', {'width': 1, 'height': 1})
     for beacon in beacons:
         resource_url = beacon['src']
@@ -23,10 +28,29 @@ def pixelBeacon(soup, url, domain):
         if domain != resource_domain:
             yield (url, resource_url, domain, resource_domain, 'pixel beacon')
 
-def facebookLike(soup, url, domain):
+def facebookShare(soup, url, domain):
     return []
 def twitterTweet(soup, url, domain):
-    return []
+    driver.get(url)
+    main_window_handle = driver.window_handles[0]
+    a_tags = driver.find_elements_by_tag_name('a')
+    for a_tag in a_tags:
+        href = a_tag.get_attribute('href')
+        # candidate tags either: don't have a href, have a href that doesn't look like a url, or start with the current url (essentially an extension of 2nd case because selenium always returns absolute href, even if it was something like "#")
+        if a_tag.is_displayed() and (not href or not re.match(url_regex, href) or href.startswith(driver.current_url)) and a_tag.size['width'] > 2 and a_tag.size['height'] > 2:
+            a_tag.click()
+            if len(driver.window_handles) > 1: # rather, if a new window opened as a result of our click
+                for window_handle in driver.window_handles:
+                    if window_handle != main_window_handle: # find new windows
+                        driver.switch_to_window(window_handle)
+                        # we're looking at url of popup window here
+                        if driver.current_url.startswith('https://twitter.com/intent/tweet'):
+                            yield (url, driver.current_url, domain, 'twitter.com', 'twitter tweet')
+                        ########
+                        driver.close() # close the popup window, move on to any others
+                driver.switch_to_window(main_window_handle) # switch back to main window
+        
+    
 def pinterestPin(soup, url, domain):
     return []
 
@@ -42,7 +66,7 @@ def scrape(url):
     domain = '%s.%s' % (extract.domain, extract.suffix)
 
     tuples = set()
-    categories = [image, video, pixelBeacon, facebookLike, twitterTweet, pinterestPin]
+    categories = [image, video, pixelBeacon, facebookShare, twitterTweet, pinterestPin]
     for category in categories:
         tuples.update(category(soup, url, domain))
 
@@ -64,3 +88,4 @@ if __name__ == "__main__":
     # Begin work
     for url in args.url:
         scrape(url)
+    driver.quit()
